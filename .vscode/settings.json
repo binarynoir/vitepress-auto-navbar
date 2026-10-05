@@ -1,0 +1,5 @@
+{
+  "cSpell.words": ["activeMatch", "binarynoir", "frontmatter", "hideall", "navbar", "npmjs", "weblink"],
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true
+}
