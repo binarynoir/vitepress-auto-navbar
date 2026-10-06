@@ -10,6 +10,10 @@ bar for you by scanning your docs folder, so you stop hand-maintaining
 [`vitepress-auto-sidebar`](https://github.com/binarynoir/vitepress-auto-sidebar)
 and uses the same config-file syntax.
 
+[![Support me on Buy Me a Coffee](https://img.shields.io/badge/Support%20me-Buy%20Me%20a%20Coffee-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/binarynoir)
+[![Support me on Ko-fi](https://img.shields.io/badge/Support%20me-Ko--fi-blue?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/binarynoir)
+[![Visit my website](https://img.shields.io/badge/Website-binarynoir.tech-8c8c8c?style=for-the-badge)](https://binarynoir.tech)
+
 ## What this does
 
 Add a new Markdown file or folder and it shows up in the navbar on its own,
