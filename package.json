@@ -1,6 +1,6 @@
 {
   "name": "@binarynoir/vitepress-auto-navbar",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Automatically generate a VitePress 2 navbar config from your docs folder structure, with per-directory ordering, titles, hiding, and exclusion files.",
   "keywords": [
     "vitepress",
