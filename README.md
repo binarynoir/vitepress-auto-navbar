@@ -57,7 +57,10 @@ VitePress expects for `themeConfig.nav`:
 - Each top-level **directory** becomes one navbar entry. With several pages it
   is a dropdown whose first item links to the directory's landing page
   (`index.md`, or `README.md` as a fallback, matched case-insensitively). With
-  only a landing page it is a plain link.
+  only a landing page it is a plain link. VitePress itself serves a `README.md`
+  at `README.html`, not the directory's index, so a `README.md` landing page
+  needs [README Index](https://binarynoir.tech/plugins/readme-index/)
+  (`readmeRewrites` and `readmeLinks`) to be served at the directory URL.
 - Each top-level **`*.md` file** becomes a plain link. The root `index.md` is
   left out, since the site logo already links home, unless a `.nav` line names
   it.
@@ -85,7 +88,42 @@ entries and `assets*` are skipped, same as the sidebar plugin.
 | `indexTitle`        | `'Overview'`   | Label for the dropdown entry that links to the directory's own landing page. `false` uses the landing page's own title.                                                                                             |
 | `flattenSinglePage` | `true`         | Collapse a directory with exactly one visible entry into a plain link, instead of a dropdown whose only item repeats its label.                                                                                     |
 | `activeMatch`       | `true`         | Add `activeMatch: '^/<dir>(?:/\|$)'` to generated items so they stay highlighted on every page beneath them.                                                                                                        |
+| `titleReplacements` | `{}`           | Words to replace in titles made from file and folder names, e.g. `{ github: "GitHub" }`. See [Titles](#titles).                                                                                                     |
+| `stripTags`         | `true`         | Remove markdown-tags syntax (`((tag\|draft))`) from titles. See [Titles](#titles).                                                                                                                                  |
+| `transformTitle`    | none           | A function that gets every title, and its source, before truncation. See [Titles](#titles).                                                                                                                         |
 | `verbose`           | `false`        | Log each directory as it's processed.                                                                                                                                                                               |
+
+## Titles
+
+A title made from a file or folder name is formatted: `getting-started.md`
+becomes "Getting Started". `formatTitle` only capitalises first letters, so
+use `titleReplacements` for words with other casing. Keys match whole words,
+ignoring case, and the values are used as written:
+
+```ts
+generateNav(docsRoot, {
+  titleReplacements: { github: 'GitHub', api: 'API', cicd: 'CI/CD' },
+});
+// github-actions/ → "GitHub Actions", cicd-setup.md → "CI/CD Setup"
+```
+
+Titles an author wrote (a heading, `title` frontmatter, a `.nav` line) are
+never changed by `titleReplacements`.
+
+Every title has [markdown-tags](https://binarynoir.tech/plugins/markdown-tags/)
+syntax removed, so `# Design ((tag|draft))` is listed as "Design". Set
+`stripTags: false` to keep it.
+
+For anything else, `transformTitle` gets every title before it is truncated,
+along with where it came from: `"name"` (a file or folder name), `"page"` (a
+page's frontmatter or first heading) or `"config"` (a `.nav` line). Return
+the title to use, or `undefined` to keep it:
+
+```ts
+generateNav(docsRoot, {
+  transformTitle: (title, { source }) => (source === 'page' ? title.replace(/^Guide: /, '') : undefined),
+});
+```
 
 ## `.nav` files
 
@@ -120,6 +158,13 @@ tools-resources:Tools & Resources
 | `.inherit`                  | On its own line: borrow `name:Title` overrides from the other `configFilenames` files (e.g. `.sidebar`) for every entry. See below.    |
 | `name:.inherit`             | Same, for that one entry only.                                                                                                         |
 | `[Group Title]`             | Start a labelled section inside a dropdown. See [Section headings](#section-headings).                                                 |
+
+Titles may be bare, `"double-quoted"` or `'single-quoted'`, with optional
+whitespace after the colon, so `name.md: "Title"` and
+`https://example.com: 'Title'` both work. The quotes around a URL are
+optional too. A line that can't be parsed as written, such as a link with no
+title or a title with unmatched quotes, logs a warning naming the file and
+line.
 
 `name` is matched against the exact on-disk entry: a **file** needs its `.md`
 extension (`glossary.md`, not `glossary`). To retitle a dropdown's landing

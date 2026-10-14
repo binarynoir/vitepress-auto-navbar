@@ -62,9 +62,36 @@ export interface GenerateNavOptions {
    * landing page. Default: true.
    */
   activeMatch?: boolean;
+  /**
+   * Words to replace in titles derived from file and directory names, matched
+   * case-insensitively against each word, e.g. `{ github: 'GitHub', cicd: 'CI/CD' }`
+   * turns `github-actions` into "GitHub Actions". Titles an author wrote (headings,
+   * frontmatter, `.nav` lines) are left alone. Default: `{}`.
+   */
+  titleReplacements?: Record<string, string>;
+  /**
+   * Remove markdown-tags syntax (`((tag|draft))`, from
+   * `@binarynoir/vitepress-markdown-tags`) from every title. Default: true.
+   */
+  stripTags?: boolean;
+  /**
+   * Called with every title before it is truncated, after `titleReplacements`
+   * and `stripTags`. Return the title to use, or `undefined` to keep it.
+   */
+  transformTitle?: TransformTitle;
   /** Log what the generator is doing as it walks the docs tree. Default: false. */
   verbose?: boolean;
 }
+
+/**
+ * Where a title came from: `name` is derived from a file or directory name,
+ * `page` from a page's `title`/`section-title` frontmatter or first `# Heading`,
+ * and `config` from a `.nav` line or the `indexTitle` option.
+ */
+export type TitleSource = 'name' | 'page' | 'config';
+
+/** See {@link GenerateNavOptions.transformTitle}. */
+export type TransformTitle = (title: string, context: { source: TitleSource }) => string | undefined;
 
 /** Fully-resolved options, after defaults have been applied. */
 export interface ResolvedNavOptions {
@@ -75,6 +102,9 @@ export interface ResolvedNavOptions {
   indexTitle: string | false;
   flattenSinglePage: boolean;
   activeMatch: boolean;
+  titleReplacements: Record<string, string>;
+  stripTags: boolean;
+  transformTitle?: TransformTitle;
   verbose: boolean;
 }
 

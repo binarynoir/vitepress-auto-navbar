@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { formatTitle, truncateTitle } from './formatTitle.js';
+import { createTitles, type Titles } from './titles.js';
 import { createExclusionContext, isExcluded, type ExclusionContext } from './exclusions.js';
 import {
   explicitTitleFor,
@@ -35,6 +35,7 @@ interface GenerateContext {
   rootPath: string;
   options: ResolvedNavOptions;
   exclusions: ExclusionContext;
+  titles: Titles;
   /** `ROOT=` links found in nested `.nav` files, waiting to be placed in the top-level navbar. */
   hoisted: BuiltItem[];
 }
@@ -62,6 +63,9 @@ export function generateNav(rootPath: string, options: GenerateNavOptions = {}):
     indexTitle: options.indexTitle ?? 'Overview',
     flattenSinglePage: options.flattenSinglePage ?? true,
     activeMatch: options.activeMatch ?? true,
+    titleReplacements: options.titleReplacements ?? {},
+    stripTags: options.stripTags ?? true,
+    transformTitle: options.transformTitle,
     verbose: options.verbose ?? false,
   };
 
@@ -69,6 +73,7 @@ export function generateNav(rootPath: string, options: GenerateNavOptions = {}):
     rootPath,
     options: resolved,
     exclusions: createExclusionContext(rootPath, resolved.excludeFilenames),
+    titles: createTitles(resolved),
     hoisted: [],
   };
 
@@ -162,7 +167,6 @@ function buildChildren(
   config: DirectoryConfig,
   isRoot: boolean,
 ): BuiltItem[] {
-  const { maxTitleLength } = ctx.options;
   const fullDir = path.posix.join(ctx.rootPath, dirPath);
   const { directives } = config;
 
@@ -224,7 +228,7 @@ function buildChildren(
   for (const item of directives) {
     if (item.hidden || !item.isWebLink || !item.url) continue;
     if (item.isRootLevel && !isRoot) {
-      if (item.title) ctx.hoisted.push({ text: truncateTitle(item.title, maxTitleLength), link: item.url });
+      if (item.title) ctx.hoisted.push({ text: ctx.titles.fromText(item.title, 'config'), link: item.url });
       continue;
     }
     if (!allNames.includes(item.url)) {
@@ -258,16 +262,21 @@ function buildChildren(
     const type = itemTypes.get(name);
 
     if (type === 'heading') {
-      section = { text: truncateTitle(titleOverrides.get(name) ?? name, maxTitleLength), items: [] };
+      section = { text: ctx.titles.fromText(titleOverrides.get(name) ?? name, 'config'), items: [] };
       results.push(section);
     } else if (type === 'file') {
-      const explicitTitle = titleOverrides.get(name) ?? getMarkdownTitle(path.posix.join(fullDir, name));
+      const configTitle = titleOverrides.get(name);
+      const pageTitle = configTitle ? undefined : getMarkdownTitle(path.posix.join(fullDir, name));
       place({
-        text: explicitTitle ? truncateTitle(explicitTitle, maxTitleLength) : formatTitle(name, maxTitleLength),
+        text: configTitle
+          ? ctx.titles.fromText(configTitle, 'config')
+          : pageTitle
+            ? ctx.titles.fromText(pageTitle, 'page')
+            : ctx.titles.fromName(name),
         link: toFileUrl(dirPath, name),
       });
     } else if (type === 'weblink') {
-      place({ text: truncateTitle(titleOverrides.get(name) ?? name, maxTitleLength), link: name });
+      place({ text: ctx.titles.fromText(titleOverrides.get(name) ?? name, 'config'), link: name });
     } else if (type === 'directory') {
       if (ctx.options.verbose) console.log(`processing: ${path.posix.join(dirPath, name)}`);
       place(...buildDirectoryItem(ctx, path.posix.join(dirPath, name), depth + 1, config));
@@ -300,12 +309,12 @@ function resolveIndexLabel(
   index: { filename: string; title?: string },
   directoryTitle: string,
 ): string {
-  const { indexTitle, maxTitleLength } = ctx.options;
-  if (index.title) return truncateTitle(index.title, maxTitleLength);
-  if (indexTitle !== false) return truncateTitle(indexTitle, maxTitleLength);
+  const { indexTitle } = ctx.options;
+  if (index.title) return ctx.titles.fromText(index.title, 'config');
+  if (indexTitle !== false) return ctx.titles.fromText(indexTitle, 'config');
 
   const pageTitle = getMarkdownTitle(path.posix.join(fullDir, index.filename));
-  return pageTitle ? truncateTitle(pageTitle, maxTitleLength) : directoryTitle;
+  return pageTitle ? ctx.titles.fromText(pageTitle, 'page') : directoryTitle;
 }
 
 /**
@@ -319,19 +328,18 @@ function resolveDirectoryTitle(
   fullDir: string,
   parent: DirectoryConfig,
 ): string {
-  const { maxTitleLength } = ctx.options;
   const baseName = path.posix.basename(dirPath);
 
   const explicitTitle = explicitTitleFor(parent, baseName);
-  if (explicitTitle) return truncateTitle(explicitTitle, maxTitleLength);
+  if (explicitTitle) return ctx.titles.fromText(explicitTitle, 'config');
 
   const indexFile = getIndexFilename(fullDir);
   if (indexFile) {
     const sectionTitle = getSectionTitleFrontmatter(path.posix.join(fullDir, indexFile));
-    if (sectionTitle) return truncateTitle(sectionTitle, maxTitleLength);
+    if (sectionTitle) return ctx.titles.fromText(sectionTitle, 'page');
   }
 
-  return formatTitle(baseName, maxTitleLength);
+  return ctx.titles.fromName(baseName);
 }
 
 /**
