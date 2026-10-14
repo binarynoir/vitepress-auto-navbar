@@ -10,7 +10,7 @@ bar for you by scanning your docs folder, so you stop hand-maintaining
 [`vitepress-auto-sidebar`](https://github.com/binarynoir/vitepress-auto-sidebar)
 and uses the same config-file syntax.
 
-[Documentation and live demo](https://binarynoir.github.io/plugins/auto-navbar)
+[Documentation and live demo](https://binarynoir.tech/plugins/auto-navbar)
 
 [![Support me on Buy Me a Coffee](https://img.shields.io/badge/Support%20me-Buy%20Me%20a%20Coffee-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/binarynoir)
 [![Support me on Ko-fi](https://img.shields.io/badge/Support%20me-Ko--fi-blue?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/binarynoir)
@@ -119,6 +119,7 @@ tools-resources:Tools & Resources
 | `.link`                     | **Navbar only.** Render this directory as one plain link to its landing page instead of a dropdown. Ignored if it has no landing page. |
 | `.inherit`                  | On its own line: borrow `name:Title` overrides from the other `configFilenames` files (e.g. `.sidebar`) for every entry. See below.    |
 | `name:.inherit`             | Same, for that one entry only.                                                                                                         |
+| `[Group Title]`             | Start a labelled section inside a dropdown. See [Section headings](#section-headings).                                                 |
 
 `name` is matched against the exact on-disk entry: a **file** needs its `.md`
 extension (`glossary.md`, not `glossary`). To retitle a dropdown's landing
@@ -156,6 +157,33 @@ glossary.md
 ``` Only `name:Title` overrides are borrowed: order, `-name`
 hiding and flags always come from the `.nav` file, and a title written in
 `.nav` beats an inherited one.
+
+### Section headings
+
+A line in square brackets starts a labelled section inside a dropdown. Every
+entry listed after it, up to the next heading, is shown under that label, so a
+long dropdown can be grouped by topic without moving pages into subfolders:
+
+```txt
+# docs/plugins/.nav
+
+index.md:Overview
+[Navigation]
+auto-sidebar.md:Auto Sidebar
+auto-navbar.md:Auto Navbar
+[Content]
+downloads.md:Downloads
+...
+```
+
+- Entries before the first heading stay as plain links at the top of the dropdown.
+- A section holds plain links only, so a subdirectory under a heading is one link to its landing page.
+- `...` places unlisted entries under the heading above it. A heading with nothing under it is left out.
+- The top-level navbar can't show sections, so headings in the docs root's `.nav` are ignored.
+
+[`vitepress-auto-sidebar`](https://github.com/binarynoir/vitepress-auto-sidebar)
+reads the same lines and shows them as sidebar groups, so a shared `.sidebar`
+file groups both menus the same way.
 
 ## `.exclude` files
 
@@ -250,40 +278,43 @@ Pull requests are welcome too.
 <p align="center">
   <a href="https://binarynoir.tech">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://binarynoir.github.io/logo-wide-dark.svg">
-      <img alt="BinaryNoir" src="https://binarynoir.github.io/logo-wide-light.svg" width="320">
+      <source media="(prefers-color-scheme: dark)" srcset="https://binarynoir.tech/logo-wide-dark.svg">
+      <img alt="BinaryNoir" src="https://binarynoir.tech/logo-wide-light.svg" width="320">
     </picture>
   </a>
 </p>
 
-Auto Navbar is one of a family of open-source VitePress plugins, editor extensions and command-line tools from BinaryNoir. Browse them all, with documentation and live demos, at **[binarynoir.github.io](https://binarynoir.github.io)**.
+Auto Navbar is one of a family of open-source VitePress plugins, editor extensions and command-line tools from BinaryNoir. Browse them all, with documentation and live demos, at **[binarynoir.tech](https://binarynoir.tech)**.
 
 **VitePress plugins**
 
-- [Auto Sidebar](https://binarynoir.github.io/plugins/auto-sidebar): sidebar built from your folders
-- [Markdown Tags](https://binarynoir.github.io/plugins/markdown-tags/): inline status badges
-- [Reading Time Tag](https://binarynoir.github.io/plugins/reading-time-tag): reading-time estimates
-- [Downloads](https://binarynoir.github.io/plugins/downloads): downloadable files next to your pages
-- [Glossary Tooltips](https://binarynoir.github.io/plugins/glossary/): hover definitions from one glossary file
-- [HTML Escape](https://binarynoir.github.io/plugins/html-escape/): stray tags and braces shown as text, not build errors
+- [Auto Sidebar](https://binarynoir.tech/plugins/auto-sidebar): sidebar built from your folders
+- [Markdown Tags](https://binarynoir.tech/plugins/markdown-tags/): inline status badges
+- [Reading Time Tag](https://binarynoir.tech/plugins/reading-time-tag): reading-time estimates
+- [Glossary Tooltips](https://binarynoir.tech/plugins/glossary/): hover definitions from one glossary file
+- [Downloads](https://binarynoir.tech/plugins/downloads): downloadable files next to your pages
+- [Exclude](https://binarynoir.tech/plugins/exclude/): keep pages out of the build with a `.exclude` file
+- [README Index](https://binarynoir.tech/plugins/readme-index/): `README.md` index pages for VuePress migrations
+- [HTML Escape](https://binarynoir.tech/plugins/html-escape/): stray tags and braces shown as text, not build errors
+- [Broken Links](https://binarynoir.tech/plugins/broken-links): dead links shown as text, not build errors
 
 **Vite plugins**
 
-- [Optimize Images](https://binarynoir.github.io/plugins/optimize-images): smaller images in the build output
-- [Image Fallback](https://binarynoir.github.io/plugins/image-fallback): a placeholder instead of a failed build
+- [Optimize Images](https://binarynoir.tech/plugins/optimize-images): smaller images in the build output
+- [Image Fallback](https://binarynoir.tech/plugins/image-fallback): a placeholder instead of a failed build
 
 **Editor extensions**
 
-- [Tags for Markdown for VS Code](https://binarynoir.github.io/plugins/markdown-tags/vscode): status badges in the VS Code Markdown preview
-- [Tags for Markdown for Obsidian](https://binarynoir.github.io/plugins/markdown-tags/obsidian): status badges in Obsidian
+- [Tags for Markdown for VS Code](https://binarynoir.tech/plugins/markdown-tags/vscode): status badges in the VS Code Markdown preview
+- [Tags for Markdown for Obsidian](https://binarynoir.tech/plugins/markdown-tags/obsidian): status badges in Obsidian
 
 **Command-line tools**
 
-- [NoirWatch](https://binarynoir.github.io/apps/noirwatch): get notified when a web page changes
-- [NoirCon](https://binarynoir.github.io/apps/noircon): get notified when a site, server or port goes down
-- [callrx](https://binarynoir.github.io/apps/callrx): amateur radio callsign lookup
+- [NoirWatch](https://binarynoir.tech/apps/noirwatch): get notified when a web page changes
+- [NoirCon](https://binarynoir.tech/apps/noircon): get notified when a site, server or port goes down
+- [callrx](https://binarynoir.tech/apps/callrx): amateur radio callsign lookup
 
-Website: **[binarynoir.tech](https://binarynoir.tech)** · Docs and demos: **[binarynoir.github.io](https://binarynoir.github.io)**
+Website, docs and demos: **[binarynoir.tech](https://binarynoir.tech)**
 
 ## Author
 

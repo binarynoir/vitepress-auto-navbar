@@ -150,6 +150,10 @@ function buildDirectoryItem(
  *
  * At the docs root, a landing page (`index.md`) is omitted unless a `.nav`
  * line names it, since the site logo already links home.
+ *
+ * Inside a dropdown, entries sorted after a `[Heading]` line are listed in a
+ * labelled section under it. The top-level navbar can't show sections, so
+ * headings there are ignored.
  */
 function buildChildren(
   ctx: GenerateContext,
@@ -188,7 +192,7 @@ function buildChildren(
     if (onDisk && !titleOverrides.has(onDisk)) titleOverrides.set(onDisk, title);
   }
 
-  const itemTypes = new Map<string, 'file' | 'directory' | 'weblink'>();
+  const itemTypes = new Map<string, 'file' | 'directory' | 'weblink' | 'heading'>();
   const allNames: string[] = [];
 
   for (const entry of dirEntries) {
@@ -229,26 +233,50 @@ function buildChildren(
     }
   }
 
+  if (!isRoot) {
+    for (const item of directives) {
+      if (!item.isHeading || itemTypes.has(item.name)) continue;
+      itemTypes.set(item.name, 'heading');
+      allNames.push(item.name);
+    }
+  }
+
   const results: BuiltItem[] = [];
+  // The `[Heading]` section entries currently go into, once one has been seen.
+  let section: BuiltItem | null = null;
+  const place = (...items: BuiltItem[]) => {
+    if (!section) return void results.push(...items);
+    // A section holds plain links only, so a subdirectory that came back as a
+    // section of its own is listed as one link to its landing page.
+    for (const item of items) {
+      if (!item.items) section.items!.push(item);
+      else if (item.items[0]?.link) section.items!.push({ text: item.text, link: item.items[0].link });
+    }
+  };
+
   for (const name of sortItemsByOrder(allNames, directives)) {
     const type = itemTypes.get(name);
 
-    if (type === 'file') {
+    if (type === 'heading') {
+      section = { text: truncateTitle(titleOverrides.get(name) ?? name, maxTitleLength), items: [] };
+      results.push(section);
+    } else if (type === 'file') {
       const explicitTitle = titleOverrides.get(name) ?? getMarkdownTitle(path.posix.join(fullDir, name));
-      results.push({
+      place({
         text: explicitTitle ? truncateTitle(explicitTitle, maxTitleLength) : formatTitle(name, maxTitleLength),
         link: toFileUrl(dirPath, name),
       });
     } else if (type === 'weblink') {
-      results.push({ text: truncateTitle(titleOverrides.get(name) ?? name, maxTitleLength), link: name });
+      place({ text: truncateTitle(titleOverrides.get(name) ?? name, maxTitleLength), link: name });
     } else if (type === 'directory') {
       if (ctx.options.verbose) console.log(`processing: ${path.posix.join(dirPath, name)}`);
-      results.push(...buildDirectoryItem(ctx, path.posix.join(dirPath, name), depth + 1, config));
+      place(...buildDirectoryItem(ctx, path.posix.join(dirPath, name), depth + 1, config));
       if (isRoot) results.push(...ctx.hoisted.splice(0));
     }
   }
 
-  return results;
+  // A heading with nothing under it is left out.
+  return results.filter((item) => !item.items || item.items.length);
 }
 
 /** Finds a directory's landing page and what its own `.nav` file says about it. */

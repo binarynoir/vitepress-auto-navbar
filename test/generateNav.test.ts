@@ -190,6 +190,89 @@ describe('.nav ordering and hiding', () => {
   });
 });
 
+describe('[Heading] sections', () => {
+  it('lists the entries after a heading in a labelled section of the dropdown', () => {
+    const nav = build({
+      plugins: {
+        'index.md': '# Plugins',
+        'a.md': '# A',
+        'b.md': '# B',
+        multi: { 'index.md': '# Multi', 'one.md': '# One' },
+        '.nav': 'index.md:Overview\n[First group]\na.md\nmulti:Multi\n[Second: group]\nb.md\n',
+      },
+    });
+
+    expect(nav[0]).toEqual({
+      text: 'Plugins',
+      activeMatch: '^/plugins(?:/|$)',
+      items: [
+        { text: 'Overview', link: '/plugins/' },
+        {
+          text: 'First group',
+          items: [
+            { text: 'A', link: '/plugins/a' },
+            { text: 'Multi', link: '/plugins/multi/', activeMatch: '^/plugins/multi(?:/|$)' },
+          ],
+        },
+        { text: 'Second: group', items: [{ text: 'B', link: '/plugins/b' }] },
+      ],
+    });
+  });
+
+  it('turns a subdirectory section into one link when it falls under a heading', () => {
+    const nav = build(
+      {
+        plugins: {
+          'index.md': '# Plugins',
+          multi: { 'index.md': '# Multi', 'one.md': '# One' },
+          '.nav': '[Group]\nmulti\n',
+        },
+      },
+      { maxDepth: 3 },
+    );
+
+    expect(nav[0]).toMatchObject({
+      items: [
+        { text: 'Overview', link: '/plugins/' },
+        { text: 'Group', items: [{ text: 'Multi', link: '/plugins/multi/' }] },
+      ],
+    });
+  });
+
+  it('places unlisted entries at `...` and drops empty headings', () => {
+    const nav = build({
+      docs: {
+        'index.md': '# Docs',
+        'a.md': '# A',
+        'z.md': '# Z',
+        '.nav': '[Empty]\n[Rest]\n...\n',
+      },
+    });
+
+    expect(nav[0]).toMatchObject({
+      items: [
+        { text: 'Overview', link: '/docs/' },
+        {
+          text: 'Rest',
+          items: [
+            { text: 'A', link: '/docs/a' },
+            { text: 'Z', link: '/docs/z' },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('ignores headings in the top-level navbar', () => {
+    const nav = build({
+      guide: { 'index.md': '# Guide' },
+      api: { 'index.md': '# API' },
+      '.nav': '[Ignored]\nguide\napi\n',
+    });
+    expect(nav.map((item) => item.text)).toEqual(['Guide', 'Api']);
+  });
+});
+
 describe('.link flag', () => {
   it('renders a multi-page directory as one plain link to its landing page', () => {
     const nav = build({ g: { '.nav': '.link', 'index.md': '# G', 'a.md': '# A', 'b.md': '# B' } });

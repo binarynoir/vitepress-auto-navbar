@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-14
+
+### Added
+
+- `[Group Title]` lines in `.nav` files, and in `.sidebar` files read through `configFilenames`: labelled sections inside a dropdown, so a long menu can be grouped by topic without moving pages into subfolders
+
+### Changed
+
+- README: list the Exclude, README Index and Broken Links plugins, and point documentation links to binarynoir.tech
+
 ## [0.2.5] - 2026-10-13
 
 ### Changed

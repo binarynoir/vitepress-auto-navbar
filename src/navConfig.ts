@@ -17,6 +17,8 @@ import type { NavFrontmatter, NavItem } from './types.js';
  *   -itemName                      hide this item
  *   ...                            everything not explicitly listed goes here,
  *                                  sorted alphabetically
+ *   [Group Title]                  start a labelled section inside a dropdown: what
+ *                                  follows, up to the next heading, is listed under it
  * plus these flag lines (see {@link extractFlags}):
  *   .hide / .hideall / .link / .inherit
  */
@@ -29,6 +31,8 @@ export interface NavDirective {
   hidden?: boolean;
   /** `name:.inherit`: take this entry's title from the other config files (see {@link DirectoryFlags.inherit}). */
   inherit?: boolean;
+  /** A `[Group Title]` line: a section heading, not an entry on disk. */
+  isHeading?: boolean;
 }
 
 /** Whole-line flags that change how a directory as a whole is rendered. */
@@ -60,6 +64,8 @@ export interface DirectoryConfig {
 /** `name:.inherit` is a directive, not a literal title (quote it to get the literal text). */
 const INHERIT_TITLE = '.inherit';
 
+const HEADING_RE = /^\[(.+)\]$/;
+
 const WEB_LINK_RE = /^["']?(https?:\/\/[^"':]+)["']?:(?:"([^"]+)"|'([^']+)'|([^"':]+))$/i;
 const QUOTED_TITLE_RE = /^([^:]+):(?:"([^"]+)"|'([^']+)')$/;
 
@@ -67,6 +73,11 @@ export function parseNavDirectives(rawLines: string[]): NavDirective[] {
   return rawLines.map((rawLine) => {
     let item = rawLine.trim();
     let hidden = false;
+
+    const headingMatch = item.match(HEADING_RE);
+    if (headingMatch) {
+      return { name: item, title: headingMatch[1].trim(), isHeading: true };
+    }
 
     if (item.startsWith('-')) {
       hidden = true;
