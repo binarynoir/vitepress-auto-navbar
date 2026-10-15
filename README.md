@@ -89,6 +89,7 @@ entries and `assets*` are skipped, same as the sidebar plugin.
 | `flattenSinglePage` | `true`         | Collapse a directory with exactly one visible entry into a plain link, instead of a dropdown whose only item repeats its label.                                                                                     |
 | `activeMatch`       | `true`         | Add `activeMatch: '^/<dir>(?:/\|$)'` to generated items so they stay highlighted on every page beneath them.                                                                                                        |
 | `titleReplacements` | `{}`           | Words to replace in titles made from file and folder names, e.g. `{ github: "GitHub" }`. See [Titles](#titles).                                                                                                     |
+| `titleCase`         | `true`         | Title-case titles made from file and folder names, keeping minor words like "to" and "the" lowercase. See [Titles](#titles).                                                                                        |
 | `stripTags`         | `true`         | Remove markdown-tags syntax (`((tag\|draft))`) from titles. See [Titles](#titles).                                                                                                                                  |
 | `transformTitle`    | none           | A function that gets every title, and its source, before truncation. See [Titles](#titles).                                                                                                                         |
 | `verbose`           | `false`        | Log each directory as it's processed.                                                                                                                                                                               |
@@ -96,8 +97,13 @@ entries and `assets*` are skipped, same as the sidebar plugin.
 ## Titles
 
 A title made from a file or folder name is formatted: `getting-started.md`
-becomes "Getting Started". `formatTitle` only capitalises first letters, so
-use `titleReplacements` for words with other casing. Keys match whole words,
+becomes "Getting Started". It is title-cased: articles, short conjunctions
+and prepositions (`a`, `the`, `and`, `of`, `to`, …) stay lowercase unless they
+are the first or last word, so `guide-to-the-cli` becomes "Guide to the Cli".
+Set `titleCase: false` to capitalise every word instead.
+
+Casing only changes first letters, so use `titleReplacements` for words with
+other casing. Keys match whole words,
 ignoring case, and the values are used as written:
 
 ```ts

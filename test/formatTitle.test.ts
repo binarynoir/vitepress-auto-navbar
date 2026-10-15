@@ -9,6 +9,17 @@ describe('formatTitle', () => {
   it('preserves acronyms', () => {
     expect(formatTitle('CI-API-guide')).toBe('CI API Guide');
   });
+
+  it('keeps minor words lowercase unless first or last', () => {
+    expect(formatTitle('guide-to-the-cli')).toBe('Guide to the Cli');
+    expect(formatTitle('the-state-of-the-art')).toBe('The State of the Art');
+    expect(formatTitle('what-to-log-in')).toBe('What to Log In');
+    expect(formatTitle('Tips-And-Tricks')).toBe('Tips and Tricks');
+  });
+
+  it('capitalises every word when titleCase is off', () => {
+    expect(formatTitle('guide-to-the-cli', 50, {}, false)).toBe('Guide To The Cli');
+  });
 });
 
 describe('truncateTitle', () => {

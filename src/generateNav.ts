@@ -64,6 +64,7 @@ export function generateNav(rootPath: string, options: GenerateNavOptions = {}):
     flattenSinglePage: options.flattenSinglePage ?? true,
     activeMatch: options.activeMatch ?? true,
     titleReplacements: options.titleReplacements ?? {},
+    titleCase: options.titleCase ?? true,
     stripTags: options.stripTags ?? true,
     transformTitle: options.transformTitle,
     verbose: options.verbose ?? false,
