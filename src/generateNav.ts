@@ -61,6 +61,7 @@ export function generateNav(rootPath: string, options: GenerateNavOptions = {}):
     maxTitleLength: options.maxTitleLength ?? 50,
     configFilenames: options.configFilenames ?? ['.nav'],
     excludeFilenames: options.excludeFilenames ?? ['.exclude'],
+    excludeFrontmatter: options.excludeFrontmatter ?? [],
     indexTitle: options.indexTitle ?? 'Overview',
     flattenSinglePage: options.flattenSinglePage ?? true,
     activeMatch: options.activeMatch ?? true,
@@ -77,7 +78,7 @@ export function generateNav(rootPath: string, options: GenerateNavOptions = {}):
   const ctx: GenerateContext = {
     rootPath,
     options: resolved,
-    exclusions: createExclusionContext(rootPath, resolved.excludeFilenames),
+    exclusions: createExclusionContext(rootPath, resolved.excludeFilenames, resolved.excludeFrontmatter),
     titles: createTitles(resolved),
     hoisted: [],
   };

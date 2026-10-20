@@ -79,23 +79,24 @@ entries and `assets*` are skipped, same as the sidebar plugin.
 
 ## Options
 
-| Option              | Default        | Description                                                                                                                                                                                                         |
-| ------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `maxDepth`          | `2`            | Navbar levels, 1-3 (the default theme can't render more). `1` = top-level links only; `2` = dropdowns of links; `3` = dropdowns that also contain labelled sections. A directory at the last level is a plain link. |
-| `maxTitleLength`    | `50`           | Truncate generated titles beyond this length.                                                                                                                                                                       |
-| `configFilenames`   | `['.nav']`     | Filenames checked for per-directory config. Use `['.nav', '.sidebar']` to fall back to existing `.sidebar` files.                                                                                                   |
-| `excludeFilenames`  | `['.exclude']` | Filenames checked for per-directory exclusion rules.                                                                                                                                                                |
-| `indexTitle`        | `'Overview'`   | Label for the dropdown entry that links to the directory's own landing page. `false` uses the landing page's own title.                                                                                             |
-| `flattenSinglePage` | `true`         | Collapse a directory with exactly one visible entry into a plain link, instead of a dropdown whose only item repeats its label.                                                                                     |
-| `activeMatch`       | `true`         | Add `activeMatch: '^/<dir>(?:/\|$)'` to generated items so they stay highlighted on every page beneath them.                                                                                                        |
-| `titleReplacements` | `{}`           | Words to replace in titles made from file and folder names, e.g. `{ github: "GitHub" }`. See [Titles](#titles).                                                                                                     |
-| `titleCase`         | `true`         | Title-case titles made from file and folder names, keeping minor words like "to" and "the" lowercase. See [Titles](#titles).                                                                                        |
-| `stripTags`         | `true`         | Remove markdown-tags syntax (`((tag\|draft))`) from titles. See [Titles](#titles).                                                                                                                                  |
-| `transformTitle`    | none           | A function that gets every title, and its source, before truncation. See [Titles](#titles).                                                                                                                         |
-| `sort`              | `'name'`       | How every directory orders the entries its config doesn't list, e.g. `'date desc'`. A directory's `.sort` setting wins. See [Settings](#settings).                                                                  |
-| `limit`             | `0`            | Most entries every dropdown shows of those its config doesn't list, after sorting. `0` for no limit. A directory's `.limit` wins. See [Limiting](#limiting).                                                        |
-| `more`              | none           | When a limit leaves entries out, end the dropdown with a link to the directory's landing page, titled with this text.                                                                                               |
-| `verbose`           | `false`        | Log each directory as it's processed.                                                                                                                                                                               |
+| Option               | Default        | Description                                                                                                                                                                                                         |
+| -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maxDepth`           | `2`            | Navbar levels, 1-3 (the default theme can't render more). `1` = top-level links only; `2` = dropdowns of links; `3` = dropdowns that also contain labelled sections. A directory at the last level is a plain link. |
+| `maxTitleLength`     | `50`           | Truncate generated titles beyond this length.                                                                                                                                                                       |
+| `configFilenames`    | `['.nav']`     | Filenames checked for per-directory config. Use `['.nav', '.sidebar']` to fall back to existing `.sidebar` files.                                                                                                   |
+| `excludeFilenames`   | `['.exclude']` | Filenames checked for per-directory exclusion rules.                                                                                                                                                                |
+| `excludeFrontmatter` | `[]`           | Frontmatter keys that hide a page when `true`, such as `['draft', 'blog.draft']`. See [Drafts in frontmatter](#drafts-in-frontmatter).                                                                              |
+| `indexTitle`         | `'Overview'`   | Label for the dropdown entry that links to the directory's own landing page. `false` uses the landing page's own title.                                                                                             |
+| `flattenSinglePage`  | `true`         | Collapse a directory with exactly one visible entry into a plain link, instead of a dropdown whose only item repeats its label.                                                                                     |
+| `activeMatch`        | `true`         | Add `activeMatch: '^/<dir>(?:/\|$)'` to generated items so they stay highlighted on every page beneath them.                                                                                                        |
+| `titleReplacements`  | `{}`           | Words to replace in titles made from file and folder names, e.g. `{ github: "GitHub" }`. See [Titles](#titles).                                                                                                     |
+| `titleCase`          | `true`         | Title-case titles made from file and folder names, keeping minor words like "to" and "the" lowercase. See [Titles](#titles).                                                                                        |
+| `stripTags`          | `true`         | Remove markdown-tags syntax (`((tag\|draft))`) from titles. See [Titles](#titles).                                                                                                                                  |
+| `transformTitle`     | none           | A function that gets every title, and its source, before truncation. See [Titles](#titles).                                                                                                                         |
+| `sort`               | `'name'`       | How every directory orders the entries its config doesn't list, e.g. `'date desc'`. A directory's `.sort` setting wins. See [Settings](#settings).                                                                  |
+| `limit`              | `0`            | Most entries every dropdown shows of those its config doesn't list, after sorting. `0` for no limit. A directory's `.limit` wins. See [Limiting](#limiting).                                                        |
+| `more`               | none           | When a limit leaves entries out, end the dropdown with a link to the directory's landing page, titled with this text.                                                                                               |
+| `verbose`            | `false`        | Log each directory as it's processed.                                                                                                                                                                               |
 
 ## Titles
 
@@ -355,6 +356,27 @@ the file lives in.
 draft/
 internal-*.md
 ````
+
+### Drafts in frontmatter
+
+A page can hide itself, too. List frontmatter keys with `excludeFrontmatter`,
+and any page that sets one of them to `true` is left out of the navbar:
+
+```ts
+generateNav(docsRoot, { excludeFrontmatter: ['draft', 'blog.draft'] });
+```
+
+Only `true` counts, dotted keys read nested values (`blog.draft` for
+[`@binarynoir/vitepress-blog`](https://binarynoir.tech/plugins/blog/) posts),
+and a folder whose landing page is hidden loses its link. Pass the same list to
+[`@binarynoir/vitepress-exclude`](https://binarynoir.tech/plugins/exclude/) to
+keep those pages out of the build, so the navbar never links to a page that
+isn't there. Turn it on for builds only to keep previewing drafts in
+`vitepress dev`:
+
+```ts
+const excludeFrontmatter = process.env.NODE_ENV === 'production' ? ['draft'] : [];
+```
 
 ## `nav.json` escape hatch
 
