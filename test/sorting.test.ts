@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { generateNav } from '../src/generateNav.js';
 import { directiveProblem, extractFlags } from '../src/navConfig.js';
-import { parseSort } from '../src/sorting.js';
+import { parseSort, toTimestamp } from '../src/sorting.js';
 import type { NavItem } from '../src/types.js';
 import { createFixture, removeFixture, type Tree } from './testUtils.js';
 
@@ -176,5 +176,25 @@ describe('.limit and .more', () => {
     const result = directiveProblem(line);
     if (problem === null) expect(result).toBeNull();
     else expect(result).toContain(problem);
+  });
+});
+
+describe('dates and times', () => {
+  it('reads a time without an offset as UTC, and an offset as written', () => {
+    expect(toTimestamp('2026-10-20 14:30')).toBe(Date.UTC(2026, 9, 20, 14, 30));
+    expect(toTimestamp('2026-10-20T14:30:00-04:00')).toBe(Date.UTC(2026, 9, 20, 18, 30));
+  });
+
+  it('sorts a dropdown by date and time, newest first', () => {
+    const nav = build({
+      meetings: {
+        'index.md': '# Meetings',
+        'standup.md': post('Standup', '2026-10-20 09:30'),
+        'retro.md': post('Retro', '2026-10-20T16:00'),
+        'planning.md': post('Planning', '2026-10-20'),
+        '.nav': '.sort: date desc\n',
+      },
+    });
+    expect(dropdownTexts(nav)).toEqual(['Retro', 'Standup', 'Planning']);
   });
 });
