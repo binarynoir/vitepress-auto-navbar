@@ -13,8 +13,9 @@ import {
   sortItemsByOrder,
   type DirectoryConfig,
 } from './navConfig.js';
+import { createEntryComparator, limitEntries, parseSort, readSortValue } from './sorting.js';
 import { getErrorMessage } from './util.js';
-import type { GenerateNavOptions, NavItem, ResolvedNavOptions } from './types.js';
+import type { GenerateNavOptions, NavItem, NavSort, ResolvedNavOptions } from './types.js';
 
 /** The default theme can't render deeper than top-level → dropdown → section → link. */
 const MAX_SUPPORTED_DEPTH = 3;
@@ -67,6 +68,9 @@ export function generateNav(rootPath: string, options: GenerateNavOptions = {}):
     titleCase: options.titleCase ?? true,
     stripTags: options.stripTags ?? true,
     transformTitle: options.transformTitle,
+    sort: resolveSortOption(options.sort),
+    limit: resolveLimitOption(options.limit),
+    more: options.more?.trim() || undefined,
     verbose: options.verbose ?? false,
   };
 
@@ -259,23 +263,34 @@ function buildChildren(
     }
   };
 
-  for (const name of sortItemsByOrder(allNames, directives)) {
+  const fileTitle = (name: string) => {
+    const configTitle = titleOverrides.get(name);
+    if (configTitle) return ctx.titles.fromText(configTitle, 'config');
+    const pageTitle = getMarkdownTitle(path.posix.join(fullDir, name));
+    return pageTitle ? ctx.titles.fromText(pageTitle, 'page') : ctx.titles.fromName(name);
+  };
+  const titleOf = (name: string) =>
+    itemTypes.get(name) === 'directory'
+      ? resolveDirectoryTitle(ctx, path.posix.join(dirPath, name), path.posix.join(fullDir, name), config)
+      : fileTitle(name);
+
+  // Cut to the directory's `.limit` (or the `limit` option), counting only the
+  // files and folders its config doesn't list.
+  const listed = new Set(directives.filter((directive) => !directive.hidden).map((directive) => directive.name));
+  const { names: shownNames, truncated } = limitEntries(
+    sortItemsByOrder(allNames, directives, entryComparator(ctx, fullDir, config, titleOf)),
+    (name) => (itemTypes.get(name) === 'file' || itemTypes.get(name) === 'directory') && !listed.has(name),
+    config.flags.limit ?? ctx.options.limit,
+  );
+
+  for (const name of shownNames) {
     const type = itemTypes.get(name);
 
     if (type === 'heading') {
       section = { text: ctx.titles.fromText(titleOverrides.get(name) ?? name, 'config'), items: [] };
       results.push(section);
     } else if (type === 'file') {
-      const configTitle = titleOverrides.get(name);
-      const pageTitle = configTitle ? undefined : getMarkdownTitle(path.posix.join(fullDir, name));
-      place({
-        text: configTitle
-          ? ctx.titles.fromText(configTitle, 'config')
-          : pageTitle
-            ? ctx.titles.fromText(pageTitle, 'page')
-            : ctx.titles.fromName(name),
-        link: toFileUrl(dirPath, name),
-      });
+      place({ text: fileTitle(name), link: toFileUrl(dirPath, name) });
     } else if (type === 'weblink') {
       place({ text: ctx.titles.fromText(titleOverrides.get(name) ?? name, 'config'), link: name });
     } else if (type === 'directory') {
@@ -285,8 +300,56 @@ function buildChildren(
     }
   }
 
+  // Entries were left out: end with a link to the landing page, where they can all be found.
+  const more = config.flags.more ?? ctx.options.more;
+  const indexFile = truncated && more ? getIndexFilename(fullDir) : null;
+  if (indexFile && !isExcluded(path.posix.join(dirPath, indexFile), ctx.exclusions)) {
+    place({ text: ctx.titles.fromText(more!, 'config'), link: toUrlDir(dirPath) });
+  }
+
   // A heading with nothing under it is left out.
   return results.filter((item) => !item.items || item.items.length);
+}
+
+/** Parses the `sort` option, warning (and keeping the default) if it can't be used. */
+function resolveSortOption(value: string | undefined): NavSort | undefined {
+  if (value === undefined) return undefined;
+  const sort = parseSort(value);
+  if (typeof sort !== 'string') return sort;
+  console.warn(`[vitepress-auto-navbar] ignoring the sort option "${value}": ${sort}`);
+  return undefined;
+}
+
+/** Checks the `limit` option, warning (and keeping no limit) if it can't be used. */
+function resolveLimitOption(value: number | undefined): number {
+  if (value === undefined) return 0;
+  if (Number.isInteger(value) && value >= 0) return value;
+  console.warn(`[vitepress-auto-navbar] ignoring the limit option ${value}: it needs a whole number, 0 for no limit`);
+  return 0;
+}
+
+/**
+ * How a directory orders the entries its config doesn't list: its own
+ * `.sort` setting, else the `sort` option, else `undefined` (alphabetical).
+ * `titleOf` gives an entry's navbar title, for sorting by `title`.
+ */
+function entryComparator(
+  ctx: GenerateContext,
+  fullDir: string,
+  config: DirectoryConfig,
+  titleOf: (name: string) => string,
+): ((a: string, b: string) => number) | undefined {
+  const sort = config.flags.sort ?? ctx.options.sort;
+  if (!sort) return undefined;
+  return createEntryComparator(sort, (name, key) => {
+    if (key === 'title') return titleOf(name);
+    const entryPath = path.posix.join(fullDir, name);
+    // A directory sorts by its landing page's frontmatter.
+    const isDirectory = !name.endsWith('.md') && fs.existsSync(entryPath) && fs.statSync(entryPath).isDirectory();
+    const indexFile = isDirectory ? getIndexFilename(entryPath) : null;
+    const file = name.endsWith('.md') ? entryPath : indexFile ? path.posix.join(entryPath, indexFile) : null;
+    return file ? readSortValue(file, key) : undefined;
+  });
 }
 
 /** Finds a directory's landing page and what its own `.nav` file says about it. */

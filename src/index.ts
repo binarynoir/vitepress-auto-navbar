@@ -7,6 +7,8 @@ export type {
   NavItemDropdown,
   NavItemSection,
   NavItemWithLink,
+  NavSort,
+  NavSortKey,
   TitleSource,
   TransformTitle,
 } from './types.js';

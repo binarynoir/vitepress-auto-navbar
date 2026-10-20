@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readFrontmatter } from './frontmatter.js';
+import { parseLimit, parseMore, parseSort } from './sorting.js';
 import { getErrorMessage } from './util.js';
-import type { NavFrontmatter, NavItem } from './types.js';
+import type { NavFrontmatter, NavItem, NavSort } from './types.js';
 
 /**
  * One parsed line from a `.nav` config file.
@@ -22,8 +23,8 @@ import type { NavFrontmatter, NavItem } from './types.js';
  *                                  sorted alphabetically
  *   [Group Title]                  start a labelled section inside a dropdown: what
  *                                  follows, up to the next heading, is listed under it
- * plus these flag lines (see {@link extractFlags}):
- *   .hide / .hideall / .link / .inherit
+ * Lines starting with `.` are directory settings, not entries (see {@link extractFlags}):
+ *   .hide / .hideall / .link / .inherit / .sort: key [asc|desc], … / .limit: n / .more: Text
  */
 export interface NavDirective {
   name: string;
@@ -53,6 +54,12 @@ export interface DirectoryFlags {
    * Order, hiding and flags are never inherited.
    */
   inherit: boolean;
+  /** `.sort: key [asc|desc], …`: how the entries this file doesn't list are ordered. */
+  sort?: NavSort;
+  /** `.limit: n`: most entries shown of those this file doesn't list, after sorting. `0` for no limit. */
+  limit?: number;
+  /** `.more: Text`: when `.limit` leaves entries out, end with a link to the landing page, titled `Text`. */
+  more?: string;
 }
 
 /** A directory's parsed `.nav` file: ordering directives plus its whole-directory flags. */
@@ -123,12 +130,64 @@ export function parseNavDirectives(rawLines: string[]): NavDirective[] {
   });
 }
 
+// `.name` or `.name: value`. A file named in the folder starts with a letter,
+// digit or `-`, never a dot (dotfiles are skipped), so the two can't collide.
+const SETTING_RE = /^\.([a-z][\w-]*)\s*(?::\s*(.*))?$/i;
+
+/** Whether a config line is a setting (`.hide`, `.sort: date desc`) rather than an entry. */
+export function isSettingLine(line: string): boolean {
+  return SETTING_RE.test(line.trim());
+}
+
+type SettingResult = { flags: Partial<DirectoryFlags> } | { problem: string };
+
+/** Reads one setting line. Every setting the config format knows is handled here. */
+function parseSettingLine(line: string): SettingResult {
+  const [, rawName, rawValue] = SETTING_RE.exec(line.trim())!;
+  const name = rawName.toLowerCase();
+  const value = rawValue?.trim() ?? '';
+  const flag = (flags: Partial<DirectoryFlags>): SettingResult =>
+    value ? { problem: `.${rawName} takes no value` } : { flags };
+  switch (name) {
+    case 'hide':
+      return flag({ hide: true });
+    case 'hideall':
+    case 'hide-all':
+      return flag({ skip: true });
+    case 'link':
+      return flag({ link: true });
+    case 'inherit':
+      return flag({ inherit: true });
+    case 'sort': {
+      const sort = parseSort(value);
+      return typeof sort === 'string' ? { problem: sort } : { flags: { sort } };
+    }
+    case 'limit': {
+      const limit = parseLimit(value);
+      return typeof limit === 'string' ? { problem: limit } : { flags: { limit } };
+    }
+    case 'more': {
+      const more = parseMore(value);
+      return more ? { flags: { more } } : { problem: 'it needs the link text, e.g. ".more: Older posts"' };
+    }
+    default:
+      return {
+        problem: `.${rawName} is not a setting (known settings: .sort, .limit, .more, .link, .inherit, .hide, .hideall)`,
+      };
+  }
+}
+
 /**
  * Why a `.nav` line can't be used as written, or `null` if it can: a link
- * that isn't `URL:Title`, or a title whose quotes don't match. Such a line
- * would otherwise be dropped from the navbar, or keep its stray quotes.
+ * that isn't `URL:Title`, a title whose quotes don't match, or a setting
+ * that is unknown or has a bad value. Such a line would otherwise be dropped
+ * from the navbar, or keep its stray quotes.
  */
 export function directiveProblem(line: string): string | null {
+  if (isSettingLine(line)) {
+    const result = parseSettingLine(line);
+    return 'problem' in result ? result.problem : null;
+  }
   const [directive] = parseNavDirectives([line]);
   if (directive.isHeading || directive.isWebLink) return null;
   if (/https?:\/\//i.test(line)) {
@@ -153,12 +212,16 @@ function directiveKey(item: NavDirective): string {
  * Sorts `items` (file/dir names, or weblink URLs) according to already-parsed
  * `.nav` entries. Items named explicitly before `...` come first (in listed
  * order), items named after `...` come last, and everything else is inserted
- * alphabetically at the `...` marker (or appended alphabetically if there's no
- * marker).
+ * at the `...` marker (or appended if there's no marker), in `compare` order:
+ * alphabetical by default, or a directory's `.sort` setting.
  */
-export function sortItemsByOrder(items: string[], directives: NavDirective[]): string[] {
+export function sortItemsByOrder(
+  items: string[],
+  directives: NavDirective[],
+  compare?: (a: string, b: string) => number,
+): string[] {
   const parsed = directives.filter((i) => !i.hidden);
-  if (!parsed.length) return items;
+  if (!parsed.length) return compare ? [...items].sort(compare) : items;
 
   const remaining = new Set(items);
   const ellipsisIndex = parsed.findIndex((i) => i.name === '...');
@@ -172,7 +235,7 @@ export function sortItemsByOrder(items: string[], directives: NavDirective[]): s
         remaining.delete(key);
       }
     }
-    return [...result, ...[...remaining].sort()];
+    return [...result, ...[...remaining].sort(compare)];
   }
 
   const before = parsed.slice(0, ellipsisIndex);
@@ -190,7 +253,7 @@ export function sortItemsByOrder(items: string[], directives: NavDirective[]): s
   }
 
   const middle = items.filter((item) => !namedBefore.has(item) && !namedAfter.has(item) && remaining.has(item));
-  middle.sort();
+  middle.sort(compare);
   for (const item of middle) remaining.delete(item);
   result.push(...middle);
 
@@ -202,7 +265,7 @@ export function sortItemsByOrder(items: string[], directives: NavDirective[]): s
     }
   }
 
-  result.push(...[...remaining].sort());
+  result.push(...[...remaining].sort(compare));
   return result;
 }
 
@@ -240,17 +303,19 @@ function readConfigFile(directoryPath: string, filename: string, verbose: boolea
   }
 }
 
-const FLAG_LINES = new Set(['.hide', '.hideall', '.hide-all', '.link', '.inherit']);
-
-/** Splits whole-directory flag lines (`.hide`, `.hideall`, `.link`, `.inherit`) out from ordering directives. */
+/**
+ * Splits setting lines (`.hide`, `.hideall`, `.link`, `.inherit`, `.sort: …`)
+ * out from ordering directives. A setting is `.name` or `.name: value`;
+ * lines that can't be used are dropped (and warned about when read).
+ */
 export function extractFlags(lines: string[]): { lines: string[]; flags: DirectoryFlags } {
-  const flags: DirectoryFlags = {
-    hide: lines.includes('.hide'),
-    skip: lines.includes('.hideall') || lines.includes('.hide-all'),
-    link: lines.includes('.link'),
-    inherit: lines.includes('.inherit'),
-  };
-  return { lines: lines.filter((line) => !FLAG_LINES.has(line)), flags };
+  const flags: DirectoryFlags = { hide: false, skip: false, link: false, inherit: false };
+  for (const line of lines) {
+    if (!isSettingLine(line)) continue;
+    const result = parseSettingLine(line);
+    if ('flags' in result) Object.assign(flags, result.flags);
+  }
+  return { lines: lines.filter((line) => !isSettingLine(line)), flags };
 }
 
 /**

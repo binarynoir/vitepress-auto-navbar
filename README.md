@@ -92,6 +92,9 @@ entries and `assets*` are skipped, same as the sidebar plugin.
 | `titleCase`         | `true`         | Title-case titles made from file and folder names, keeping minor words like "to" and "the" lowercase. See [Titles](#titles).                                                                                        |
 | `stripTags`         | `true`         | Remove markdown-tags syntax (`((tag\|draft))`) from titles. See [Titles](#titles).                                                                                                                                  |
 | `transformTitle`    | none           | A function that gets every title, and its source, before truncation. See [Titles](#titles).                                                                                                                         |
+| `sort`              | `'name'`       | How every directory orders the entries its config doesn't list, e.g. `'date desc'`. A directory's `.sort` setting wins. See [Settings](#settings).                                                                  |
+| `limit`             | `0`            | Most entries every dropdown shows of those its config doesn't list, after sorting. `0` for no limit. A directory's `.limit` wins. See [Limiting](#limiting).                                                        |
+| `more`              | none           | When a limit leaves entries out, end the dropdown with a link to the directory's landing page, titled with this text.                                                                                               |
 | `verbose`           | `false`        | Log each directory as it's processed.                                                                                                                                                                               |
 
 ## Titles
@@ -188,8 +191,11 @@ tools-resources:Tools & Resources
 | `name:Custom Title`         | Order it and override its display title.                                                                                               |
 | `"https://…":Title`         | Insert an external link here (in this dropdown, or the navbar if this is the root).                                                    |
 | `ROOT="https://…":Title`    | Insert an external link in the top-level navbar, next to this directory's entry.                                                       |
-| `...`                       | Everything not listed explicitly goes here, alphabetically.                                                                            |
+| `...`                       | Everything not listed explicitly goes here, alphabetically or by `.sort`.                                                              |
 | `-name`                     | Hide this entry entirely.                                                                                                              |
+| `.sort: key [asc\|desc], …` | A setting: how unlisted entries are ordered. See [Settings](#settings).                                                                |
+| `.limit: n`                 | A setting: show at most `n` unlisted entries. See [Limiting](#limiting).                                                               |
+| `.more: Text`               | A setting: a link to the landing page when entries were left out.                                                                      |
 | `.hide`                     | Hide _this_ directory's own landing link, but keep showing its children.                                                               |
 | `.hideall` (or `.hide-all`) | Skip this directory and everything under it.                                                                                           |
 | `.link`                     | **Navbar only.** Render this directory as one plain link to its landing page instead of a dropdown. Ignored if it has no landing page. |
@@ -209,8 +215,75 @@ extension (`glossary.md`, not `glossary`). To retitle a dropdown's landing
 entry, use `index.md:Title`.
 
 Ordering: items listed before `...` come first, in the order listed; items
-listed after `...` come last; everything else is inserted alphabetically at the
-`...` marker (or appended alphabetically, if there's no `...`).
+listed after `...` come last; everything else is inserted at the `...` marker
+(or appended, if there's no `...`), alphabetically unless a
+[`.sort` setting](#settings) says otherwise.
+
+### Settings
+
+A line that starts with a dot is a setting for the directory, not an entry.
+Every setting is written the same way: `.name` turns it on, and
+`.name: value` gives it a value. These are `.sort`, `.limit`, `.more`, `.link`,
+`.inherit`, `.hide` and `.hideall` in the table above. An unknown setting, or one with a
+value it can't use, logs a warning naming the file and line, and is ignored.
+
+[Auto Sidebar](https://binarynoir.tech/plugins/auto-sidebar/) reads the same
+settings the same way, so one `.sidebar` file can serve both plugins: a
+`.sort` line there orders the sidebar and the navbar dropdown alike.
+
+#### Sorting
+
+```txt
+# docs/blog/.sidebar (read by both plugins)
+
+index.md:All posts
+.sort: date desc
+```
+
+| Key           | Sorts by                                                                              |
+| ------------- | ------------------------------------------------------------------------------------- |
+| `name`        | The file or folder name. This is the default.                                         |
+| `title`       | The title shown in the navbar, wherever it came from.                                 |
+| `date`        | The page's `date` frontmatter, or `blog.date` for `@binarynoir/vitepress-blog` posts. |
+| anything else | That frontmatter field. Use dots for nested fields: `.sort: meta.order`.              |
+
+- The direction is `asc` (A to Z, oldest first, smallest first) unless you write `desc`.
+- Dates and numbers compare as dates and numbers, so `2` sorts before `10`.
+- Several keys, separated by commas, sort by the first and break ties with the
+  next: `.sort: blog.sticky desc, date desc` puts sticky blog posts on top,
+  each group newest first.
+- Pages without a value go last for that key, in either direction, and are
+  ordered by the next key. A `false` value counts as no value, so pages with
+  `sticky: false` sort with those that don't say. Final ties go by name.
+- A directory sorts by its landing page's frontmatter, including top-level
+  entries when the root's config has a `.sort`.
+- Only entries the file doesn't list are sorted; listed entries keep their place.
+- A setting covers its own directory, not the ones below it. To sort every
+  directory the same way, pass the [`sort` option](#options); a directory's own
+  `.sort` still wins.
+
+#### Limiting
+
+A folder with hundreds of pages makes a dropdown too long to use, and
+VitePress sends the whole dropdown to every page. `.limit` keeps the first
+entries after sorting:
+
+```txt
+# docs/blog/.sidebar
+
+index.md:All posts
+.sort: blog.sticky desc, date desc
+.limit: 10
+.more: Older posts
+```
+
+- Only entries the file doesn't list count toward the limit, and listed
+  entries always show. Above, "All posts" plus the 10 first in sort order.
+- `.more: Text` ends the list with a link to the directory's landing page, but
+  only when entries were left out. Leave it out for no link: the blog above
+  already links its landing page as "All posts".
+- `.limit: 0` means no limit. The [`limit` and `more` options](#options) set
+  both for every directory; a directory's own lines win.
 
 ### Reusing `.sidebar` titles with `.inherit`
 

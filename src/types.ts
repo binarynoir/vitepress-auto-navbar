@@ -86,9 +86,42 @@ export interface GenerateNavOptions {
    * and `stripTags`. Return the title to use, or `undefined` to keep it.
    */
   transformTitle?: TransformTitle;
+  /**
+   * How every directory orders the entries its config file doesn't list: a
+   * key and an optional direction, written like the `.sort` setting, e.g.
+   * `'date desc'` or `'title'`. A directory's own `.sort` line wins.
+   * Default: `'name'` (alphabetical by file name).
+   */
+  sort?: string;
+  /**
+   * Most entries every dropdown shows of those its config doesn't list,
+   * after sorting, so a folder of 1,000 posts shows only the newest few. A
+   * directory's own `.limit` wins. Default: `0` (no limit).
+   */
+  limit?: number;
+  /**
+   * When a limit leaves entries out, end the dropdown with a link to the
+   * directory's landing page, titled with this text, e.g. `'Older posts'`. A
+   * directory's own `.more` wins. Default: none (no link).
+   */
+  more?: string;
   /** Log what the generator is doing as it walks the docs tree. Default: false. */
   verbose?: boolean;
 }
+
+/**
+ * One key of a sort order, from a `.sort: key [asc|desc], …` setting or the `sort` option.
+ * `name` is the file or folder name, `title` the title shown in the navbar,
+ * `date` the page's `date` (or `blog.date`), and anything else a frontmatter
+ * field, with dots for nested fields.
+ */
+export interface NavSortKey {
+  key: string;
+  direction: 'asc' | 'desc';
+}
+
+/** One or more sort keys, in order: each later key breaks ties in the ones before it. */
+export type NavSort = NavSortKey[];
 
 /**
  * Where a title came from: `name` is derived from a file or directory name,
@@ -113,6 +146,9 @@ export interface ResolvedNavOptions {
   titleCase: boolean;
   stripTags: boolean;
   transformTitle?: TransformTitle;
+  sort?: NavSort;
+  limit: number;
+  more?: string;
   verbose: boolean;
 }
 
