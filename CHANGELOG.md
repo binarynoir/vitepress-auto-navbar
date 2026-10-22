@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-10-22
+
 ### Fixed
 
 - A `.sidebar` file read with `configFilenames` can carry Auto Sidebar's new `.group` setting without a warning
