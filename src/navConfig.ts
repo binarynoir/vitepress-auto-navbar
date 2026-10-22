@@ -170,6 +170,9 @@ function parseSettingLine(line: string): SettingResult {
       const more = parseMore(value);
       return more ? { flags: { more } } : { problem: 'it needs the link text, e.g. ".more: Older posts"' };
     }
+    // @binarynoir/vitepress-auto-sidebar's `.group`, which a shared `.sidebar` file may carry. Dropdowns aren't grouped.
+    case 'group':
+      return { flags: {} };
     default:
       return {
         problem: `.${rawName} is not a setting (known settings: .sort, .limit, .more, .link, .inherit, .hide, .hideall)`,

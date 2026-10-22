@@ -76,6 +76,8 @@ describe('settings', () => {
     ['.sort', 'needs a key'],
     ['.link: yes', 'takes no value'],
     ['.colapsed', 'not a setting'],
+    // Auto Sidebar's setting, which a shared .sidebar file may carry.
+    ['.group: month', null],
   ])('checks %s', (line, problem) => {
     const result = directiveProblem(line);
     if (problem === null) expect(result).toBeNull();
